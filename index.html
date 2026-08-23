@@ -5,44 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diya Chhodbadia — The Arcade</title>
 
-<!--
-  Fonts:
-  - Fraunces  = the "display" font. Used for headlines, cabinet names, the
-                marquee title, and anything that should feel hand-carved
-                and a little dramatic.
-  - Inter     = the "body" font. Used for paragraphs and buttons — clean
-                and easy to read at small sizes.
-  - IBM Plex Mono = the "utility" font. Used for labels, stats, and numbers
-                (balance, bet, skill %) — gives them a console/readout feel.
--->
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
-  /* ============================================================
-     DESIGN TOKENS
-     Every color and spacing value the page uses is declared once
-     here as a CSS variable (--name). Change a value in this block
-     and it updates everywhere that variable is used — this is the
-     easiest place to re-theme the whole site.
-     ============================================================ */
+
   :root{
-    /* --- Backgrounds (wood cabinet palette, dark room) --- */
-    --void:#4A3049;        /* page background — the dark "arcade room" */
+    /* --- Backgrounds  */
+    --void:#4A3049;        /* page background */
     --wood:#5C3F5B ;        /* cabinet body color */
-    --wood-light:#6E4C6C;  /* lighter wood, used for inset panels */
+    --wood-light:#6E4C6C;  /*  inset panels */
     --wood-trim:#3A2439;   /* cabinet frame/edge highlight */
 
-    /* --- Accent (brass hardware, used for all interactive/glow bits) --- */
+  
     --brass:#E8B86D ;
-    --brass-bright:#F4CD8A; /* lighter brass, used for hover states + glow */
-    --paper:#F2E9D8; /* cream clipboard color — used only in the QA section */
+    --brass-bright:#F4CD8A; /*  used for hover states + glow */
+    --paper:#F2E9D8; /* used only in the QA section */
 
     /* --- Text --- */
     --ivory:#FBF3F5;   /* primary text color */
     --muted:#D3B8CC;   /* secondary/supporting text */
-    --line:rgba(232,184,109,0.22); /* faint hairline borders/dividers */
+    --line:rgba(232,184,109,0.22); /*  borders/dividers */
 
     /* --- Category chips (each project cabinet gets one of these) --- */
     --chip-gold:#D9A441;  /* games */
@@ -79,13 +64,13 @@
   section{padding:100px 0;}
   @media (max-width:640px){ section{padding:68px 0;} }
 
-  /* ============================================================
+  /* 
      SCROLL-REVEAL
      Elements start slightly lower + transparent, then animate into
      place the first time they scroll into view (see JS at the
      bottom — IntersectionObserver toggles the .in-view class).
      Turned off automatically for anyone with reduced-motion set.
-     ============================================================ */
+     */
   .reveal{
     opacity:0;
     transform:translateY(18px);
@@ -96,12 +81,12 @@
     .reveal{opacity:1; transform:none; transition:none;}
   }
 
-  /* ============================================================
+  /* 
      BOOT OVERLAY
      A full-screen "INSERT COIN" splash that covers the page for a
      moment on load, then fades out (see JS). Purely decorative —
      it sets the arcade tone before the real content shows.
-     ============================================================ */
+      */
   #boot{
     position:fixed; inset:0; z-index:999;
     background:var(--void);
@@ -113,9 +98,9 @@
   #boot.hide{opacity:0; pointer-events:none;} /* JS adds this class to dismiss it */
   @media (prefers-reduced-motion: reduce){ #boot{display:none;} }
 
-  /* ============================================================
+  /* 
      NAV BAR
-     ============================================================ */
+     */
   nav{
     position:sticky; top:0; z-index:50; /* stays pinned while scrolling */
     background:rgba(71, 6, 50, 0.86);
@@ -139,9 +124,8 @@
     .brand span{display:none;}
   }
 
-  /* ============================================================
-     HERO
-     ============================================================ */
+  /* HERO
+      */
   .hero{padding-top:90px; text-align:center; position:relative;}
 
   /* Soft glow sitting behind the headline — purely atmospheric.
@@ -191,9 +175,9 @@
   .section-head h2{font-size:clamp(1.8rem, 4vw, 2.3rem);}
   .section-head p{color:var(--muted); max-width:540px; margin:14px auto 0;}
 
-  /* ============================================================
+  /*
      ARCADE HALL — the project grid, styled as wooden cabinets
-     ============================================================ */
+     */
   .hall-floor{display:grid; grid-template-columns:repeat(2, 1fr); gap:26px;}
   @media (max-width:760px){ .hall-floor{grid-template-columns:1fr;} }
 
@@ -265,9 +249,9 @@
   }
   .placeholder-cabinet .plus{font-size:1.5rem; color:var(--brass); margin-bottom:8px;}
 
-  /* ============================================================
+  /* 
      SLOT MACHINE WIDGET (lives inside cabinet 01)
-     ============================================================ */
+     */
 
   /* The dark screen the reels sit inside, with an inset shadow so it
      reads as recessed into the cabinet rather than flat on top of it. */
@@ -337,7 +321,7 @@
      is under 16px. Forcing 16px here stops that jarring zoom-in on tap. */
   .deposit-gate input{font-size:16px;}
 
-  /* ============================================================
+  /*
      TEST BENCH (QA section)
      Styled as a paper maintenance clipboard clipped to the cabinet
      wall — reuses .cabinet-shell's wood frame for consistency, but
@@ -345,7 +329,7 @@
      this is "documentation," not a playable cabinet. Text inside
      uses dark ink colors (not the site's ivory/muted tokens) since
      it's sitting on a light background.
-     ============================================================ */
+      */
   .qa-stack{display:flex; flex-direction:column; gap:26px;}
 
   .clipboard{
@@ -415,9 +399,9 @@
   }
   .placeholder-clipboard .plus{font-size:1.5rem; color:#8a6a3d; margin-bottom:8px;}
 
-  /* ============================================================
+  /* 
      PLAYER PROFILE (the "about me" section, styled as an ID card)
-     ============================================================ */
+     */
   .profile-card{background:linear-gradient(155deg, var(--wood-trim), var(--wood)); border-radius:16px; padding:4px;}
   .profile-inner{
     background:var(--void); border-radius:13px; padding:40px;
@@ -469,12 +453,12 @@
   .fun-fact:hover{border-color:var(--brass);}
   .fun-fact .k{display:block; font-family:'IBM Plex Mono', monospace; font-size:0.62rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--brass); margin-bottom:6px;}
 
-  /* ============================================================
+  /* 
      SMALL-PHONE TUNING (roughly iPhone SE / 375px and under)
      Everything above already reflows at 640-760px breakpoints;
      this pass tightens spacing and font sizes further so nothing
      feels cramped on the smallest common screens.
-     ============================================================ */
+     */
   @media (max-width:420px){
     .wrap{padding:0 18px;}
     .hero{padding-top:64px;}
@@ -650,67 +634,129 @@
            test suite (manual, automated, API, etc.) -->
       <div class="cabinet-shell reveal">
         <div class="clipboard">
-          <div class="clipboard-head">
-            <h3>Checkout Flow — Manual Test Suite</h3>
-            <span class="qa-tag">Manual QA</span>
-          </div>
-          <p class="desc">Example test log for an e-commerce checkout flow. Replace with your own project, tool (Jira, TestRail, a spreadsheet, Selenium/Cypress, Postman, etc.), and real results.</p>
+         <div class="clipboard-head">
+  <h3>Lucky Three — Slot Machine Test Suite</h3>
+  <span class="qa-tag">Manual QA</span>
+</div>
+<p class="desc">Test log for the slot machine game (Cabinet 01) — deposit validation, bet/line limits, payout logic, and balance tracking.</p>
 
-          <!-- Quick-glance summary. Update the numbers to match your table. -->
-          <div class="qa-summary">
-            <div class="qa-stat"><div class="n">12</div><div class="l">Total Cases</div></div>
-            <div class="qa-stat"><div class="n pass">9</div><div class="l">Passed</div></div>
-            <div class="qa-stat"><div class="n fail">2</div><div class="l">Failed</div></div>
-            <div class="qa-stat"><div class="n">75%</div><div class="l">Pass Rate</div></div>
-          </div>
+<div class="qa-summary">
+  <div class="qa-stat"><div class="n">14</div><div class="l">Total Cases</div></div>
+  <div class="qa-stat"><div class="n pass">14</div><div class="l">Passed</div></div>
+  <div class="qa-stat"><div class="n fail">0</div><div class="l">Failed</div></div>
+  <div class="qa-stat"><div class="n">100%</div><div class="l">Pass Rate</div></div>
+</div>
 
-          <!-- The actual test cases. Add/remove <tr> rows as needed. -->
-          <div class="test-table-wrap">
-            <table class="test-table">
-              <thead>
-                <tr><th>ID</th><th>Test Case</th><th>Expected Result</th><th>Actual Result</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>TC-01</td>
-                  <td>Add item to cart, proceed to checkout</td>
-                  <td>Cart total updates, checkout page loads</td>
-                  <td>As expected</td>
-                  <td><span class="status-pill pass">Pass</span></td>
-                </tr>
-                <tr>
-                  <td>TC-02</td>
-                  <td>Apply an expired promo code</td>
-                  <td>Error message shown, total unchanged</td>
-                  <td>As expected</td>
-                  <td><span class="status-pill pass">Pass</span></td>
-                </tr>
-                <tr>
-                  <td>TC-03</td>
-                  <td>Submit payment with an empty card field</td>
-                  <td>Form blocks submit, field highlighted</td>
-                  <td>Form submitted anyway, silent failure</td>
-                  <td><span class="status-pill fail">Fail</span></td>
-                </tr>
-                <tr>
-                  <td>TC-04</td>
-                  <td>Complete checkout on mobile viewport (375px)</td>
-                  <td>All fields visible, no horizontal scroll</td>
-                  <td>Summary panel overflows off-screen</td>
-                  <td><span class="status-pill fail">Fail</span></td>
-                </tr>
-                <tr>
-                  <td>TC-05</td>
-                  <td>Guest checkout without an account</td>
-                  <td>Order completes, confirmation email sent</td>
-                  <td>Pending — needs test email inbox access</td>
-                  <td><span class="status-pill blocked">Blocked</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+<div class="test-table-wrap">
+  <table class="test-table">
+    <thead>
+      <tr><th>ID</th><th>Test Case</th><th>Expected Result</th><th>Actual Result</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>TC-01</td>
+        <td>Valid deposit accepted</td>
+        <td>Game area appears, balance shows $100</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-02</td>
+        <td>Zero/negative deposit rejected</td>
+        <td>Input border turns red, game does not start</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-03</td>
+        <td>Non-numeric deposit rejected</td>
+        <td>Input border turns red, game does not start</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-04</td>
+        <td>Lines can't exceed 3</td>
+        <td>Stepper stops at 3, doesn't go higher</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-05</td>
+        <td>Lines can't go below 1</td>
+        <td>Stepper stops at 1, doesn't go to 0</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-06</td>
+        <td>Bet can't exceed $100</td>
+        <td>Stepper stops at 100</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-07</td>
+        <td>Bet can't go below $1</td>
+        <td>Stepper stops at 1</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-08</td>
+        <td>Spin blocked if total bet exceeds balance</td>
+        <td>Error message shown, balance unchanged, no spin happens</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-09</td>
+        <td>Winning line pays out correctly</td>
+        <td>Balance increases by (symbol value × bet), line highlighted gold</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-10</td>
+        <td>Losing spin deducts bet only</td>
+        <td>Balance decreases by exactly the total bet</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-11</td>
+        <td>Multiple winning lines pay simultaneously</td>
+        <td>Total winnings = sum of every winning line's payout</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-12</td>
+        <td>Game locks when balance hits $0</td>
+        <td>Spin button disables, message prompts re-deposit</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-13</td>
+        <td>Double-click doesn't double-spin</td>
+        <td>Only one spin executes, no duplicate deduction</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+      <tr>
+        <td>TC-14</td>
+        <td>Reels always show a valid symbol</td>
+        <td>Every cell always shows A, B, C, or D — never blank/undefined</td>
+        <td>Passed</td>
+        <td><span class="status-pill pass">Pass</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-          <a href="#" class="go-link">View full test plan &rarr;</a>
+<a href="#" class="go-link">View full test plan &rarr;</a>
+
         </div>
       </div>
 
@@ -748,10 +794,10 @@
 
         <div>
           <div class="profile-text">
-            <p><strong>I studied computer engineering and computer science, and what stuck with me wasn't one language or stack</strong> &mdash; it was the habit of taking a rough idea and actually building it to see what breaks. 
-              This site is proof of that: a Python script turned into a playable game, test cases written like a QA log, a design nobody handed me a template for. I'm just as interested in why something works — 
+            <p><strong>I studied computer engineering and computer science, and what stuck with me was not one language or stack</strong> it was the habit of taking a rough idea and actually building it to see what breaks. 
+              This site is proof of that: a Python script turned into a playable game, test cases written like a QA log, a design nobody handed me a template for. I am just as interested in why something works
               which is where the psychology pull comes from, understanding behavior instead of rushing to a verdict on it.</p>
-            <p>I'm early in deciding exactly which lane I want to specialize in, and I'd rather say that upfront than pretend otherwise. What I want next is a team that'll let me keep experimenting while that focus sharpens.</p>
+            <p>I am early in deciding exactly which lane I want to specialize in, and I would rather say that upfront than pretend otherwise. What I want next is a team that will let me keep experimenting while that focus sharpens.</p>
           </div>
 
           <!-- data-pct holds the target fill % — JS reads it and animates
@@ -780,29 +826,29 @@
     <p>Thank You, Diya.</p>
     <div class="contact-row">
       <a class="btn btn-primary" href="mailto:you@example.com">diyap5208@gmail.com</a>
-      <a class="btn btn-ghost" href="https://github.com/yourusername" target="_blank" rel="noopener">GitHub</a>
-      <a class="btn btn-ghost" href="www.linkdin.com/in/diya-chhodbadia" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn btn-ghost" href="https://github.com/DIYACHHODBADIA09" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-ghost" href="https://linkedin.com/in/diya-chhodbadia" target="_blank" rel="noopener">LinkedIn</a>
       <a class="btn btn-ghost" href="DIYAQ.pdf" download>Resume</a>
     </div>
-    <div class="copyright">&copy; 2026 Your Name. Built by hand, one cabinet at a time.</div>
+    <div class="copyright">&copy; 2026 Diya Chhodbadia. Built by hand, one cabinet at a time.</div>
   </div>
 </footer>
 
 <script>
-/* ================================================================
+/* 
    ALL SCRIPT FOR THE PAGE, IN THREE PARTS:
      1. Page-load effects  — boot overlay, scroll-reveal, skill bars
      2. Slot machine game  — direct port of the original Python logic
      3. Event wiring       — connects buttons/inputs to the game state
-   ================================================================ */
+    */
 (function(){
   "use strict";
 
-  /* ------------------------------------------------------------
+  /* 
      1a. BOOT OVERLAY
      Wait for the page to fully load, pause briefly so the message
      is actually readable, then fade the overlay out.
-     ------------------------------------------------------------ */
+     */
   window.addEventListener('load', () => {
     setTimeout(() => {
       const boot = document.getElementById('boot');
@@ -810,14 +856,14 @@
     }, 700);
   });
 
-  /* ------------------------------------------------------------
+  /* 
      1b. SCROLL REVEAL
      Any element with class="reveal" starts hidden (see CSS).
      IntersectionObserver watches for it entering the viewport and
      adds "in-view", which triggers the CSS fade/slide-up transition.
      Each element only needs to reveal once, so we stop observing
      it after it has appeared.
-     ------------------------------------------------------------ */
+      */
   const revealTargets = document.querySelectorAll('.reveal');
   if ('IntersectionObserver' in window){
     const revealObserver = new IntersectionObserver((entries, observer) => {
@@ -834,12 +880,12 @@
     revealTargets.forEach(el => el.classList.add('in-view'));
   }
 
-  /* ------------------------------------------------------------
+  /*
      1c. SKILL BAR ANIMATION
      Bars start at width:0 in CSS. Once the profile section scrolls
      into view, read each bar's data-pct attribute and set its real
      width — the CSS transition animates the fill.
-     ------------------------------------------------------------ */
+     */
   const skillSection = document.getElementById('skillBars');
   if (skillSection && 'IntersectionObserver' in window){
     const barObserver = new IntersectionObserver((entries, observer) => {
@@ -1022,10 +1068,10 @@
     }
   }
 
-  /* ================================================================
+  /* 
      3. SPIN BUTTON — ties everything above together, equivalent to
      the spin() function in the Python script.
-     ================================================================ */
+   */
   spinBtn.addEventListener('click', () => {
     if (spinning) return; // ignore clicks while a spin is already running
 
