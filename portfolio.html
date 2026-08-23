@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diya Chhodbadia — The Arcade</title>
+
+<!--
+  Fonts:
+  - Fraunces  = the "display" font. Used for headlines, cabinet names, the
+                marquee title, and anything that should feel hand-carved
+                and a little dramatic.
+  - Inter     = the "body" font. Used for paragraphs and buttons — clean
+                and easy to read at small sizes.
+  - IBM Plex Mono = the "utility" font. Used for labels, stats, and numbers
+                (balance, bet, skill %) — gives them a console/readout feel.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     DESIGN TOKENS
+     Every color and spacing value the page uses is declared once
+     here as a CSS variable (--name). Change a value in this block
+     and it updates everywhere that variable is used — this is the
+     easiest place to re-theme the whole site.
+     ============================================================ */
+  :root{
+    /* --- Backgrounds (wood cabinet palette, dark room) --- */
+    --void:#4A3049;        /* page background — the dark "arcade room" */
+    --wood:#5C3F5B ;        /* cabinet body color */
+    --wood-light:#6E4C6C;  /* lighter wood, used for inset panels */
+    --wood-trim:#3A2439;   /* cabinet frame/edge highlight */
+
+    /* --- Accent (brass hardware, used for all interactive/glow bits) --- */
+    --brass:#E8B86D ;
+    --brass-bright:#F4CD8A; /* lighter brass, used for hover states + glow */
+    --paper:#F2E9D8; /* cream clipboard color — used only in the QA section */
+
+    /* --- Text --- */
+    --ivory:#FBF3F5;   /* primary text color */
+    --muted:#D3B8CC;   /* secondary/supporting text */
+    --line:rgba(232,184,109,0.22); /* faint hairline borders/dividers */
+
+    /* --- Category chips (each project cabinet gets one of these) --- */
+    --chip-gold:#D9A441;  /* games */
+    --chip-teal:#4FA398;  /* tools */
+    --chip-coral:#D9695B; /* data / experiments */
+  }
+
+  /* Reset: remove default browser spacing so our own spacing is predictable */
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;} /* nav links scroll smoothly instead of jumping */
+
+  /* overflow-x:hidden on both html and body is the fix for the #1 mobile
+     bug: any element that's even slightly wider than the phone's screen
+     (decorative glows, wide grids, etc.) would otherwise force the whole
+     page to scroll sideways instead of just clipping at the edge. */
+  html, body{overflow-x:hidden; width:100%;}
+
+  body{
+    /* Two backgrounds layered: a soft warm glow near the top of the page,
+       then the solid near-black "room" color underneath it. */
+    background:
+      radial-gradient(ellipse 1000px 560px at 50% -10%, rgba(201,161,91,0.12), transparent 62%),
+      radial-gradient(ellipse 700px 500px at 85% 15%, rgba(201,161,91,0.05), transparent 60%),
+      var(--void);
+    color:var(--ivory);
+    font-family:'Inter', sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  h1,h2,h3{font-family:'Fraunces', serif; font-weight:600; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .wrap{max-width:1100px; margin:0 auto; padding:0 28px;} /* centered content column */
+  section{padding:100px 0;}
+  @media (max-width:640px){ section{padding:68px 0;} }
+
+  /* ============================================================
+     SCROLL-REVEAL
+     Elements start slightly lower + transparent, then animate into
+     place the first time they scroll into view (see JS at the
+     bottom — IntersectionObserver toggles the .in-view class).
+     Turned off automatically for anyone with reduced-motion set.
+     ============================================================ */
+  .reveal{
+    opacity:0;
+    transform:translateY(18px);
+    transition:opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.in-view{opacity:1; transform:translateY(0);}
+  @media (prefers-reduced-motion: reduce){
+    .reveal{opacity:1; transform:none; transition:none;}
+  }
+
+  /* ============================================================
+     BOOT OVERLAY
+     A full-screen "INSERT COIN" splash that covers the page for a
+     moment on load, then fades out (see JS). Purely decorative —
+     it sets the arcade tone before the real content shows.
+     ============================================================ */
+  #boot{
+    position:fixed; inset:0; z-index:999;
+    background:var(--void);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    transition:opacity 0.5s ease;
+  }
+  #boot .mono{color:var(--brass); font-size:0.95rem; letter-spacing:0.04em;}
+  #boot .press{margin-top:18px; color:var(--muted); font-size:0.8rem;}
+  #boot.hide{opacity:0; pointer-events:none;} /* JS adds this class to dismiss it */
+  @media (prefers-reduced-motion: reduce){ #boot{display:none;} }
+
+  /* ============================================================
+     NAV BAR
+     ============================================================ */
+  nav{
+    position:sticky; top:0; z-index:50; /* stays pinned while scrolling */
+    background:rgba(71, 6, 50, 0.86);
+    backdrop-filter:blur(10px); /* frosted-glass effect over content behind it */
+    border-bottom:1px solid var(--line);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; padding:18px 28px; gap:12px;}
+  .brand{font-family:'Fraunces', serif; font-size:1.1rem; font-weight:700; white-space:nowrap;}
+  .brand span{color:var(--brass);}
+  nav ul{list-style:none; display:flex; gap:30px;}
+  nav a{text-decoration:none; font-size:0.99rem; color:var(--muted); transition:color 0.2s;}
+  nav a:hover, nav a:focus-visible{color:var(--brass-bright);}
+
+  /* Phones: the brand text + 3 nav links don't fit on one line at
+     ~320-375px wide, so tighten the gap and drop the "— arcade" suffix
+     rather than let the row wrap awkwardly or overflow. */
+  @media (max-width:480px){
+    nav .wrap{padding:14px 16px;}
+    nav ul{gap:14px;}
+    nav a{font-size:0.8rem;}
+    .brand span{display:none;}
+  }
+
+  /* ============================================================
+     HERO
+     ============================================================ */
+  .hero{padding-top:90px; text-align:center; position:relative;}
+
+  /* Soft glow sitting behind the headline — purely atmospheric.
+     width uses min() so it shrinks to fit narrow phone screens instead
+     of staying a fixed 600px and overflowing the viewport. */
+  .hero::before{
+    content:'';
+    position:absolute; top:-40px; left:50%; transform:translateX(-50%);
+    width:min(600px, 92vw); height:340px;
+    background:radial-gradient(ellipse, rgba(201,161,91,0.16), transparent 70%);
+    pointer-events:none; z-index:-1;
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:0.76rem;
+    letter-spacing:0.16em; text-transform:uppercase; color:var(--brass);
+    margin-bottom:20px;
+  }
+  .hero h1{font-size:clamp(2.3rem, 6vw, 4rem); line-height:1.06; max-width:840px; margin:0 auto 22px;}
+  .hero h1 em{font-style:italic; color:var(--brass-bright);}
+  .hero p{max-width:560px; margin:0 auto 34px; color:var(--muted); font-size:1.05rem;}
+  .cta-row{display:flex; gap:14px; justify-content:center; flex-wrap:wrap;}
+
+  /* Buttons: two variants — solid brass (primary action) and outlined (secondary) */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:13px 24px; border-radius:4px; font-size:0.9rem; font-weight:600;
+    text-decoration:none; cursor:pointer; border:1px solid transparent;
+    transition:transform 0.12s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family:'Inter', sans-serif;
+  }
+  .btn:active{transform:translateY(1px);} /* subtle "press" feedback on click */
+  .btn-primary{background:var(--brass); color:var(--void); box-shadow:0 8px 22px -10px rgba(201,161,91,0.55);}
+  .btn-primary:hover{background:var(--brass-bright); box-shadow:0 10px 26px -8px rgba(201,161,91,0.7);}
+  .btn-ghost{background:transparent; border-color:var(--line); color:var(--ivory);}
+  .btn-ghost:hover{border-color:var(--brass);}
+
+  /* Row of small blinking "marquee" bulbs used as a section divider */
+  .marquee-dots{display:flex; justify-content:center; gap:9px; margin:52px 0 0;}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--brass); opacity:0.3; animation:blink 2.6s ease-in-out infinite;}
+  .dot:nth-child(3n){animation-delay:0.5s;} .dot:nth-child(3n+1){animation-delay:1s;}
+  @keyframes blink{0%,100%{opacity:0.25;} 50%{opacity:1; box-shadow:0 0 8px var(--brass-bright);}}
+  @media (prefers-reduced-motion: reduce){ .dot{animation:none; opacity:0.6;} }
+
+  .section-head{text-align:center; margin-bottom:56px;}
+  .section-head .eyebrow{margin-bottom:12px;}
+  .section-head h2{font-size:clamp(1.8rem, 4vw, 2.3rem);}
+  .section-head p{color:var(--muted); max-width:540px; margin:14px auto 0;}
+
+  /* ============================================================
+     ARCADE HALL — the project grid, styled as wooden cabinets
+     ============================================================ */
+  .hall-floor{display:grid; grid-template-columns:repeat(2, 1fr); gap:26px;}
+  @media (max-width:760px){ .hall-floor{grid-template-columns:1fr;} }
+
+  /* The outer "shell" is the brass frame; .cabinet inside it is the
+     wood body. Two layers so the frame can show as a thin gold border. */
+  .cabinet-shell{
+    background:linear-gradient(160deg, var(--wood-trim), var(--wood) 55%, var(--wood-trim));
+    border-radius:16px; padding:4px;
+    box-shadow:0 24px 55px -18px rgba(0,0,0,0.65);
+    transition:transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  /* Hover: the whole cabinet lifts slightly and the shadow deepens,
+     like it's stepping toward you under the marquee lights. */
+  .cabinet-shell:hover{
+    transform:translateY(-6px);
+    box-shadow:0 34px 70px -16px rgba(0,0,0,0.75), 0 0 0 1px rgba(201,161,91,0.25);
+  }
+
+  .cabinet{
+    /* Faint wood-grain texture: thin repeating diagonal lines layered
+       under the radial highlight and base wood color. */
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(201,161,91,0.08), transparent 55%),
+      repeating-linear-gradient(115deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 5px),
+      var(--wood);
+    border-radius:13px; padding:22px 20px 24px; height:100%;
+    display:flex; flex-direction:column;
+  }
+
+  /* Colored nameplate strip at the top of each cabinet — the color
+     itself communicates the category (gold/teal/coral), so no extra
+     "category" label element is needed elsewhere. */
+  .nameplate{
+    border-radius:8px; padding:10px 14px; margin-bottom:16px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem;
+    text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--void); font-weight:600;
+  }
+  .nameplate.gold{background:var(--chip-gold);}
+  .nameplate.teal{background:var(--chip-teal);}
+  .nameplate.coral{background:var(--chip-coral);}
+
+  .cabinet h3{font-size:1.3rem; margin-bottom:8px;}
+  .cabinet .desc{color:var(--muted); font-size:0.92rem; margin-bottom:14px;}
+  .cabinet .stack{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+  .cabinet .stack span{
+    font-family:'IBM Plex Mono', monospace; font-size:0.68rem; color:var(--muted);
+    background:rgba(255,255,255,0.04); border-radius:4px; padding:3px 8px;
+  }
+  .cabinet .row{margin-top:auto; display:flex; gap:10px; flex-wrap:wrap;} /* pinned to bottom of card */
+  .coin-btn{
+    flex:1; text-align:center; padding:12px; border-radius:6px; border:none;
+    font-family:'Fraunces', serif; font-weight:700; font-size:0.92rem;
+    cursor:pointer; text-decoration:none; display:inline-block;
+    transition:filter 0.15s ease, transform 0.12s ease;
+  }
+  .coin-btn:active{transform:translateY(1px);}
+  .coin-btn.primary{background:var(--brass); color:var(--void);}
+  .coin-btn.primary:hover{filter:brightness(1.1);}
+  .coin-btn.ghost{background:transparent; border:1px solid var(--line); color:var(--ivory);}
+  .coin-btn.ghost:hover{border-color:var(--brass);}
+
+  /* "Empty slot" cabinet — a dashed placeholder inviting more projects */
+  .placeholder-cabinet{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; min-height:260px; color:var(--muted);
+    border:1px dashed var(--line); border-radius:12px; padding:24px;
+  }
+  .placeholder-cabinet .plus{font-size:1.5rem; color:var(--brass); margin-bottom:8px;}
+
+  /* ============================================================
+     SLOT MACHINE WIDGET (lives inside cabinet 01)
+     ============================================================ */
+
+  /* The dark screen the reels sit inside, with an inset shadow so it
+     reads as recessed into the cabinet rather than flat on top of it. */
+  .reel-window{
+    background:#0A0705; border:1px solid var(--line); border-radius:9px;
+    padding:16px; margin-bottom:18px; box-shadow:inset 0 4px 16px rgba(0,0,0,0.55);
+  }
+  .reels{display:grid; grid-template-columns:repeat(3, 1fr); gap:9px;} /* 3 columns */
+  .reel-col{display:flex; flex-direction:column; gap:9px;}             /* 3 rows each */
+  .cell{
+    aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    background:var(--wood-light); border-radius:7px;
+    font-family:'Fraunces', serif; font-weight:700; font-size:1.5rem;
+    border:1px solid transparent; transition:border-color 0.3s ease, background 0.3s ease;
+  }
+  /* Applied to every cell while the reels are "spinning" — a quick
+     up/down jitter to fake motion before the result lands. */
+  .cell.spinning{animation:reel-blur 0.12s linear infinite; color:var(--muted);}
+  @keyframes reel-blur{0%{transform:translateY(-2px);} 50%{transform:translateY(2px);} 100%{transform:translateY(-2px);}}
+  /* Applied after a spin to any cell that's part of a winning line */
+  .cell.win-cell{border-color:var(--brass-bright); background:rgba(201,161,91,0.18); color:var(--brass-bright); box-shadow:0 0 14px -2px rgba(231,201,126,0.5);}
+  /* Each symbol gets its own tint so the reels aren't monochrome */
+  .cell[data-sym="A"]{color:#E7C97E;} .cell[data-sym="B"]{color:#D9A98A;}
+  .cell[data-sym="C"]{color:#8FB39A;} .cell[data-sym="D"]{color:#8FA0B3;}
+
+  .payline-key{display:flex; justify-content:center; gap:14px; font-family:'IBM Plex Mono', monospace; font-size:0.68rem; color:var(--muted); margin-top:12px; flex-wrap:wrap;}
+  .payline-key span{color:var(--ivory); font-weight:600;}
+
+  /* Lines / bet-per-line steppers (the +/- controls) */
+  .controls{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-family:'IBM Plex Mono', monospace; font-size:0.66rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted);}
+  .stepper{display:flex; align-items:center; background:#0A0705; border:1px solid var(--line); border-radius:6px; overflow:hidden;}
+  .stepper button{background:transparent; border:none; color:var(--brass); font-size:1.05rem; width:34px; height:34px; cursor:pointer; transition:background 0.15s;}
+  .stepper button:hover{background:rgba(201,161,91,0.12);}
+  .stepper button:disabled{opacity:0.3; cursor:not-allowed;}
+  .stepper .val{flex:1; text-align:center; font-family:'IBM Plex Mono', monospace; font-size:0.9rem;}
+
+  /* Balance / last spin / current bet readout */
+  .stats-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:18px; text-align:center;}
+  .stat{background:#0A0705; border:1px solid var(--line); border-radius:7px; padding:10px 6px;}
+  .stat .label{font-family:'IBM Plex Mono', monospace; font-size:0.6rem; text-transform:uppercase; letter-spacing:0.07em; color:var(--muted); margin-bottom:5px;}
+  .stat .value{font-family:'IBM Plex Mono', monospace; font-size:0.95rem; font-weight:600; color:var(--brass-bright);}
+  .stat .value.loss{color:var(--chip-coral);} .stat .value.win{color:var(--chip-teal);}
+
+  .spin-btn{
+    width:100%; padding:14px; border-radius:7px; border:none;
+    background:linear-gradient(180deg, var(--brass-bright), var(--brass)); color:var(--void);
+    font-family:'Fraunces', serif; font-weight:700; font-size:1.05rem; letter-spacing:0.02em;
+    cursor:pointer; transition:transform 0.12s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    box-shadow:0 10px 24px -10px rgba(201,161,91,0.6);
+  }
+  .spin-btn:hover{filter:brightness(1.08); box-shadow:0 14px 30px -8px rgba(201,161,91,0.75);}
+  .spin-btn:disabled{opacity:0.4; cursor:not-allowed; filter:none; box-shadow:none;}
+
+  .result-line{text-align:center; margin-top:12px; min-height:20px; font-family:'IBM Plex Mono', monospace; font-size:0.8rem; color:var(--muted);}
+  .result-line.win{color:var(--chip-teal);} .result-line.loss{color:var(--chip-coral);}
+
+  /* Shown before a deposit is made; swapped out for #gameArea after */
+  .deposit-gate{text-align:center;}
+  .deposit-gate input{
+    width:150px; text-align:center; background:#0A0705; border:1px solid var(--line); border-radius:6px;
+    color:var(--ivory); font-family:'IBM Plex Mono', monospace; font-size:0.95rem; padding:11px; margin:14px 0;
+  }
+  .deposit-gate input:focus{outline:1px solid var(--brass); border-color:var(--brass);}
+  /* iOS Safari auto-zooms the whole page when a tapped input's font-size
+     is under 16px. Forcing 16px here stops that jarring zoom-in on tap. */
+  .deposit-gate input{font-size:16px;}
+
+  /* ============================================================
+     TEST BENCH (QA section)
+     Styled as a paper maintenance clipboard clipped to the cabinet
+     wall — reuses .cabinet-shell's wood frame for consistency, but
+     the inner panel is the --paper color instead of wood, since
+     this is "documentation," not a playable cabinet. Text inside
+     uses dark ink colors (not the site's ivory/muted tokens) since
+     it's sitting on a light background.
+     ============================================================ */
+  .qa-stack{display:flex; flex-direction:column; gap:26px;}
+
+  .clipboard{
+    background:var(--paper);
+    color:#2A1F16; /* dark "ink" text — this panel is light, unlike the rest of the site */
+    border-radius:13px;
+    padding:30px 26px 26px;
+    position:relative;
+    height:100%;
+  }
+  /* The little metal clip at the top of the clipboard — pure CSS, no image */
+  .clipboard::before{
+    content:'';
+    position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+    width:72px; height:22px; border-radius:6px;
+    background:linear-gradient(180deg,#E2E2E2,#9B9B9B);
+    box-shadow:0 4px 8px rgba(0,0,0,0.35);
+  }
+
+  .clipboard-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;}
+  .clipboard-head h3{font-size:1.25rem; color:#20160D;}
+  .qa-tag{
+    font-family:'IBM Plex Mono', monospace; font-size:0.66rem; text-transform:uppercase;
+    letter-spacing:0.07em; font-weight:700; color:#5b4a37;
+    background:rgba(74,48,32,0.1); border-radius:20px; padding:4px 11px;
+  }
+  .clipboard .desc{color:#6b5842; font-size:0.9rem; margin-bottom:18px;}
+
+  /* Summary strip: total / passed / failed / pass rate at a glance */
+  .qa-summary{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:20px;}
+  @media (max-width:480px){ .qa-summary{grid-template-columns:repeat(2, 1fr);} }
+  .qa-stat{background:rgba(74,48,32,0.06); border-radius:8px; padding:10px 8px; text-align:center;}
+  .qa-stat .n{font-family:'IBM Plex Mono', monospace; font-weight:700; font-size:1.1rem; color:#2A1F16;}
+  .qa-stat .n.pass{color:#2f6b61;} .qa-stat .n.fail{color:#a3402f;}
+  .qa-stat .l{font-size:0.6rem; text-transform:uppercase; letter-spacing:0.06em; color:#7a6a54; margin-top:2px;}
+
+  /* Test-case table. Wrapped in a scrollable div (not the page body)
+     so on narrow phones the table scrolls sideways inside its own box
+     instead of forcing the whole page to overflow horizontally. */
+  .test-table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:8px; border:1px solid rgba(74,48,32,0.14); margin-bottom:16px;}
+  table.test-table{width:100%; border-collapse:collapse; font-family:'IBM Plex Mono', monospace; font-size:0.76rem; min-width:600px;}
+  table.test-table thead th{
+    text-align:left; padding:10px 12px; background:rgba(74,48,32,0.07);
+    text-transform:uppercase; letter-spacing:0.05em; font-size:0.65rem; color:#5b4a37; white-space:nowrap;
+  }
+  table.test-table tbody td{padding:10px 12px; border-top:1px solid rgba(74,48,32,0.1); vertical-align:top; color:#3a2c1e;}
+  table.test-table tbody tr:hover{background:rgba(74,48,32,0.035);}
+
+  /* Pass/fail/blocked badges — reuse the site's win/loss/gold colors
+     so a fail here visually rhymes with a losing spin on the slot
+     machine, and a pass rhymes with a win. */
+  .status-pill{display:inline-block; padding:3px 10px; border-radius:20px; font-size:0.66rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap;}
+  .status-pill.pass{background:rgba(79,163,152,0.2); color:#2f6b61;}
+  .status-pill.fail{background:rgba(217,105,90,0.2); color:#a3402f;}
+  .status-pill.blocked{background:rgba(217,164,65,0.25); color:#8a5f16;}
+
+  .clipboard .go-link{
+    font-family:'IBM Plex Mono', monospace; font-size:0.8rem; color:#5b4a37;
+    text-decoration:underline; text-underline-offset:3px;
+  }
+
+  /* Empty clipboard slot, matching the "+" placeholder cabinets in the hall */
+  .placeholder-clipboard{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; min-height:180px; color:#7a6a54;
+    border:1px dashed rgba(74,48,32,0.25); border-radius:12px; padding:28px;
+  }
+  .placeholder-clipboard .plus{font-size:1.5rem; color:#8a6a3d; margin-bottom:8px;}
+
+  /* ============================================================
+     PLAYER PROFILE (the "about me" section, styled as an ID card)
+     ============================================================ */
+  .profile-card{background:linear-gradient(155deg, var(--wood-trim), var(--wood)); border-radius:16px; padding:4px;}
+  .profile-inner{
+    background:var(--void); border-radius:13px; padding:40px;
+    display:grid; grid-template-columns:220px 1fr; gap:40px; /* badge | text */
+  }
+  @media (max-width:700px){ .profile-inner{grid-template-columns:1fr; padding:28px;} }
+
+  .id-badge{background:var(--wood-light); border:1px solid var(--line); border-radius:12px; padding:22px; text-align:center;}
+  /* Avatar circle: swap this whole block for <img> if you have a real headshot */
+  .id-avatar{
+    width:88px; height:88px; border-radius:50%; margin:0 auto 14px;
+    background:radial-gradient(circle at 35% 30%, var(--brass-bright), var(--brass) 60%, var(--wood-trim));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif; font-size:1.8rem; font-weight:700; color:var(--void);
+    box-shadow:0 0 0 3px rgba(201,161,91,0.18), 0 10px 24px -8px rgba(0,0,0,0.6);
+  }
+  .id-badge h3{font-size:1.1rem; margin-bottom:4px;}
+  .id-badge .role{font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--muted); margin-bottom:18px;}
+  .id-badge .resume-btn{
+    display:block; width:100%; padding:11px; border-radius:6px; text-align:center;
+    background:var(--brass); color:var(--void); font-weight:700; font-size:0.82rem;
+    text-decoration:none; font-family:'Inter', sans-serif; margin-bottom:8px;
+    transition:background 0.2s ease;
+  }
+  .id-badge .resume-btn:hover{background:var(--brass-bright);}
+  .id-badge .resume-note{font-family:'IBM Plex Mono', monospace; font-size:0.62rem; color:var(--muted);}
+
+  .profile-text p{color:var(--muted); margin-bottom:16px; font-size:0.98rem;}
+  .profile-text p:last-of-type{margin-bottom:24px;}
+  .profile-text p strong{color:var(--ivory);}
+
+  /* Skills shown as a "high score" table with animated fill bars */
+  .high-scores{list-style:none;}
+  .high-scores li{
+    display:grid; grid-template-columns:110px 1fr 40px; align-items:center; gap:12px;
+    padding:9px 0; border-bottom:1px solid var(--line); font-size:0.85rem;
+  }
+  .high-scores li:last-child{border-bottom:none;}
+  .high-scores .skill-name{font-family:'IBM Plex Mono', monospace; color:var(--ivory);}
+  .bar-track{height:6px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden;}
+  /* The fill starts at 0 width; JS sets it to the real % once the
+     profile section scrolls into view, so it animates in. */
+  .bar-fill{height:100%; width:0; background:linear-gradient(90deg, var(--brass), var(--brass-bright)); transition:width 1.1s ease;}
+  .high-scores .pct{font-family:'IBM Plex Mono', monospace; font-size:0.72rem; color:var(--muted); text-align:right;}
+
+  .fun-facts{margin-top:26px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;}
+  @media (max-width:520px){ .fun-facts{grid-template-columns:1fr;} }
+  .fun-fact{background:var(--wood-light); border:1px solid var(--line); border-radius:8px; padding:14px; font-size:0.82rem; color:var(--muted); transition:border-color 0.2s ease;}
+  .fun-fact:hover{border-color:var(--brass);}
+  .fun-fact .k{display:block; font-family:'IBM Plex Mono', monospace; font-size:0.62rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--brass); margin-bottom:6px;}
+
+  /* ============================================================
+     SMALL-PHONE TUNING (roughly iPhone SE / 375px and under)
+     Everything above already reflows at 640-760px breakpoints;
+     this pass tightens spacing and font sizes further so nothing
+     feels cramped on the smallest common screens.
+     ============================================================ */
+  @media (max-width:420px){
+    .wrap{padding:0 18px;}
+    .hero{padding-top:64px;}
+    .hero p{font-size:0.95rem;}
+    .btn{padding:12px 18px; font-size:0.85rem;}
+    .cabinet{padding:18px 14px 20px;}
+    .cell{font-size:1.2rem;}
+    /* Stats and steppers go from 3/2 columns down to 1 so labels and
+       numbers never truncate or overlap on a narrow screen. */
+    .stats-row{grid-template-columns:1fr; gap:8px;}
+    .controls{grid-template-columns:1fr;}
+    .profile-inner{padding:20px;}
+    .id-avatar{width:72px; height:72px; font-size:1.5rem;}
+    .high-scores li{grid-template-columns:88px 1fr 36px; gap:8px; font-size:0.8rem;}
+  }
+
+  /* ============================================================
+     FOOTER
+     ============================================================ */
+  footer{border-top:1px solid var(--line); padding:56px 0; text-align:center;}
+  footer h2{font-size:1.8rem; margin-bottom:14px;}
+  footer p{color:var(--muted); margin-bottom:26px;}
+  .contact-row{display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:38px;}
+  .copyright{font-family:'IBM Plex Mono', monospace; font-size:0.7rem; color:var(--muted);}
+</style>
+</head>
+<body>
+
+<!-- Full-screen splash shown for ~0.7s on load, then faded out by JS -->
+<div id="boot" aria-hidden="true">
+  <div class="mono">INSERT COIN...</div>
+  <div class="press">loading the arcade</div>
+</div>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">Diya Chhodbadia <span>&mdash; arcade</span></div>
+    <ul>
+      <li><a href="#hall">Cabinets</a></li>
+      <li><a href="#qa">QA</a></li>
+      <li><a href="#profile">Profile</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <div class="eyebrow">Personal Arcade &middot; Player One</div>
+  <h1>Every project here is a cabinet you can <em>walk up and play.</em></h1>
+  <p>I build small, finished pieces of software instead of half-shipped ideas. Step into the hall, try one, or grab my resume off the wall.</p>
+  <div class="cta-row">
+    <a href="#hall" class="btn btn-primary">Enter the arcade</a>
+    <!-- "download" attribute + resume.pdf: put a real resume.pdf next to this
+         HTML file and this link will download it -->
+    <a href="DIYAQ.pdf" class="btn btn-ghost" download>Download resume</a>
+  </div>
+  <div class="marquee-dots" aria-hidden="true">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+</header>
+
+<section id="hall">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">The Hall</div>
+      <h2>Pick a cabinet</h2>
+      <p>Marquee color marks the category &mdash; gold for games, teal for tools, coral for data &amp; experiments.</p>
+    </div>
+
+    <div class="hall-floor">
+
+      <!-- CABINET 01 — the playable slot machine -->
+      <div class="cabinet-shell reveal">
+        <div class="cabinet">
+          <div class="nameplate gold"><span>Game</span><span>01</span></div>
+          <h3>Lucky Three</h3>
+          <p class="desc">A console betting game rebuilt as a live widget: weighted reels, multi-line payouts, real balance tracking.</p>
+          <div class="stack"><span>Python</span><span>JavaScript</span></div>
+
+          <!-- Step 1: ask for a deposit. Hidden once the player deposits. -->
+          <div id="depositGate" class="deposit-gate">
+            <div class="field" style="align-items:center;">
+              <label for="depositInput">Deposit to play</label>
+              <input type="number" id="depositInput" min="1" placeholder="100" class="mono">
+            </div>
+            <button class="spin-btn" id="depositBtn" style="margin-top:4px;">INSERT COIN</button>
+          </div>
+
+          <!-- Step 2: the actual game. display:none until deposit is made. -->
+          <div id="gameArea" style="display:none;">
+            <div class="reel-window">
+              <!-- 3x3 grid of symbol cells is built by JS at load time -->
+              <div class="reels" id="reels"></div>
+              <div class="payline-key"><span>L1</span> top <span>L2</span> mid <span>L3</span> bottom</div>
+            </div>
+            <div class="stats-row">
+              <div class="stat"><div class="label">Balance</div><div class="value mono" id="balanceVal">$0</div></div>
+              <div class="stat"><div class="label">Last</div><div class="value mono" id="lastVal">&mdash;</div></div>
+              <div class="stat"><div class="label">Bet</div><div class="value mono" id="totalBetVal">$0</div></div>
+            </div>
+            <div class="controls">
+              <div class="field">
+                <label>Lines</label>
+                <div class="stepper"><button id="linesDown">&minus;</button><div class="val mono" id="linesVal">1</div><button id="linesUp">&plus;</button></div>
+              </div>
+              <div class="field">
+                <label>Bet/line</label>
+                <div class="stepper"><button id="betDown">&minus;</button><div class="val mono" id="betVal">1</div><button id="betUp">&plus;</button></div>
+              </div>
+            </div>
+            <button class="spin-btn" id="spinBtn">SPIN</button>
+            <div class="result-line mono" id="resultLine">Place your bet and pull the lever.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CABINET 02 — placeholder: replace with a real "tool" project -->
+      <div class="cabinet-shell reveal">
+        <div class="cabinet">
+          <div class="nameplate teal"><span>Tool</span><span>02</span></div>
+          <h3>My Next Tool Coming soon</h3>
+          <p class="desc">Stay tuned</p>
+          <div class="stack"><span>Stack</span><span>Here</span></div>
+          <div class="row">
+            <a href="#" class="coin-btn primary">Try it</a>
+            <a href="#" class="coin-btn ghost">Code</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CABINET 03 — placeholder: replace with a real "data" project -->
+      <div class="cabinet-shell reveal">
+        <div class="cabinet">
+          <div class="nameplate coral"><span>Data</span><span>03</span></div>
+          <h3>My Next Experiment</h3>
+          <p class="desc">A script, an API, a scraper, a model &mdash; built to answer a question.</p>
+          <div class="stack"><span>Stack</span><span>Here</span></div>
+          <div class="row">
+            <a href="#" class="coin-btn primary">Try it</a>
+            <a href="#" class="coin-btn ghost">Code</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- CABINET 04 — empty slot for a future project -->
+      <div class="cabinet-shell reveal">
+        <div class="cabinet">
+          <div class="placeholder-cabinet">
+            <div class="plus">+</div>
+            <p>Coming soon.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="qa">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Quality Assurance</div>
+      <h2>The Test Bench</h2>
+      <p>Before a cabinet goes on the floor, it gets tested. Here's the log from my QA projects — real test cases, not just a "tested it, works" claim.</p>
+    </div>
+
+    <div class="qa-stack">
+
+      <!-- CLIPBOARD 1 — replace with a real testing project.
+           Duplicate this whole .cabinet-shell block for each additional
+           test suite (manual, automated, API, etc.) -->
+      <div class="cabinet-shell reveal">
+        <div class="clipboard">
+          <div class="clipboard-head">
+            <h3>Checkout Flow — Manual Test Suite</h3>
+            <span class="qa-tag">Manual QA</span>
+          </div>
+          <p class="desc">Example test log for an e-commerce checkout flow. Replace with your own project, tool (Jira, TestRail, a spreadsheet, Selenium/Cypress, Postman, etc.), and real results.</p>
+
+          <!-- Quick-glance summary. Update the numbers to match your table. -->
+          <div class="qa-summary">
+            <div class="qa-stat"><div class="n">12</div><div class="l">Total Cases</div></div>
+            <div class="qa-stat"><div class="n pass">9</div><div class="l">Passed</div></div>
+            <div class="qa-stat"><div class="n fail">2</div><div class="l">Failed</div></div>
+            <div class="qa-stat"><div class="n">75%</div><div class="l">Pass Rate</div></div>
+          </div>
+
+          <!-- The actual test cases. Add/remove <tr> rows as needed. -->
+          <div class="test-table-wrap">
+            <table class="test-table">
+              <thead>
+                <tr><th>ID</th><th>Test Case</th><th>Expected Result</th><th>Actual Result</th><th>Status</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>TC-01</td>
+                  <td>Add item to cart, proceed to checkout</td>
+                  <td>Cart total updates, checkout page loads</td>
+                  <td>As expected</td>
+                  <td><span class="status-pill pass">Pass</span></td>
+                </tr>
+                <tr>
+                  <td>TC-02</td>
+                  <td>Apply an expired promo code</td>
+                  <td>Error message shown, total unchanged</td>
+                  <td>As expected</td>
+                  <td><span class="status-pill pass">Pass</span></td>
+                </tr>
+                <tr>
+                  <td>TC-03</td>
+                  <td>Submit payment with an empty card field</td>
+                  <td>Form blocks submit, field highlighted</td>
+                  <td>Form submitted anyway, silent failure</td>
+                  <td><span class="status-pill fail">Fail</span></td>
+                </tr>
+                <tr>
+                  <td>TC-04</td>
+                  <td>Complete checkout on mobile viewport (375px)</td>
+                  <td>All fields visible, no horizontal scroll</td>
+                  <td>Summary panel overflows off-screen</td>
+                  <td><span class="status-pill fail">Fail</span></td>
+                </tr>
+                <tr>
+                  <td>TC-05</td>
+                  <td>Guest checkout without an account</td>
+                  <td>Order completes, confirmation email sent</td>
+                  <td>Pending — needs test email inbox access</td>
+                  <td><span class="status-pill blocked">Blocked</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <a href="#" class="go-link">View full test plan &rarr;</a>
+        </div>
+      </div>
+
+      <!-- CLIPBOARD 2 — empty slot for your next testing project -->
+      <div class="cabinet-shell reveal">
+        <div class="clipboard">
+          <div class="placeholder-clipboard">
+            <div class="plus">+</div>
+            <p>Add another test suite — automated regression, API tests, a bug-bash report, anything with real cases and outcomes.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="profile">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="eyebrow">Player Profile</div>
+      <h2>Who's playing</h2>
+    </div>
+
+    <div class="profile-card reveal">
+      <div class="profile-inner">
+        <div class="id-badge">
+          <!-- Swap "YN" + this whole div for <img src="you.jpg"> if you want a real photo -->
+          <div class="id-avatar">DC</div>
+          <h3>Diya Chhodbadia</h3>
+          <div class="role">Developer/QA</div>
+          <a href="DIYAQ.pdf" class="resume-btn" download>Download Resume</a>
+          <div class="resume-note">PDF &middot; updated Aug 2026</div>
+        </div>
+
+        <div>
+          <div class="profile-text">
+            <p><strong>I studied computer engineering and computer science, and what stuck with me wasn't one language or stack</strong> &mdash; it was the habit of taking a rough idea and actually building it to see what breaks. 
+              This site is proof of that: a Python script turned into a playable game, test cases written like a QA log, a design nobody handed me a template for. I'm just as interested in why something works — 
+              which is where the psychology pull comes from, understanding behavior instead of rushing to a verdict on it.</p>
+            <p>I'm early in deciding exactly which lane I want to specialize in, and I'd rather say that upfront than pretend otherwise. What I want next is a team that'll let me keep experimenting while that focus sharpens.</p>
+          </div>
+
+          <!-- data-pct holds the target fill % — JS reads it and animates
+               the bar to that width once this section is scrolled into view -->
+          <ul class="high-scores" id="skillBars">
+            <li><span class="skill-name">Python</span><div class="bar-track"><div class="bar-fill" data-pct="50"></div></div><span class="pct">85%</span></li>
+            <li><span class="skill-name">JavaScript</span><div class="bar-track"><div class="bar-fill" data-pct="75"></div></div><span class="pct">75%</span></li>
+            <li><span class="skill-name">HTML/CSS</span><div class="bar-track"><div class="bar-fill" data-pct="80"></div></div><span class="pct">80%</span></li>
+            <li><span class="skill-name">SQL</span><div class="bar-track"><div class="bar-fill" data-pct="40"></div></div><span class="pct">60%</span></li>
+          </ul>
+
+          <div class="fun-facts">
+            <div class="fun-fact"><span class="k">Currently</span>Open to new roles</div>
+            <div class="fun-fact"><span class="k">Based in</span>NJ/NYC</div>
+            <div class="fun-fact"><span class="k">Off duty</span>Digital Paintings  &middot; <a href="d.jpg">Painting1</a>, <a href="d2.jpg">Painting2</a>, <a href="d3.jpg">Painting3</a>, Reading Books, Nature,</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer id="contact">
+  <div class="wrap reveal">
+    <h2>Game over? Let's talk.</h2>
+    <p>Thank You, Diya.</p>
+    <div class="contact-row">
+      <a class="btn btn-primary" href="mailto:you@example.com">diyap5208@gmail.com</a>
+      <a class="btn btn-ghost" href="https://github.com/yourusername" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn btn-ghost" href="www.linkdin.com/in/diya-chhodbadia" target="_blank" rel="noopener">LinkedIn</a>
+      <a class="btn btn-ghost" href="DIYAQ.pdf" download>Resume</a>
+    </div>
+    <div class="copyright">&copy; 2026 Your Name. Built by hand, one cabinet at a time.</div>
+  </div>
+</footer>
+
+<script>
+/* ================================================================
+   ALL SCRIPT FOR THE PAGE, IN THREE PARTS:
+     1. Page-load effects  — boot overlay, scroll-reveal, skill bars
+     2. Slot machine game  — direct port of the original Python logic
+     3. Event wiring       — connects buttons/inputs to the game state
+   ================================================================ */
+(function(){
+  "use strict";
+
+  /* ------------------------------------------------------------
+     1a. BOOT OVERLAY
+     Wait for the page to fully load, pause briefly so the message
+     is actually readable, then fade the overlay out.
+     ------------------------------------------------------------ */
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      const boot = document.getElementById('boot');
+      if (boot) boot.classList.add('hide');
+    }, 700);
+  });
+
+  /* ------------------------------------------------------------
+     1b. SCROLL REVEAL
+     Any element with class="reveal" starts hidden (see CSS).
+     IntersectionObserver watches for it entering the viewport and
+     adds "in-view", which triggers the CSS fade/slide-up transition.
+     Each element only needs to reveal once, so we stop observing
+     it after it has appeared.
+     ------------------------------------------------------------ */
+  const revealTargets = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window){
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting){
+          entry.target.classList.add('in-view');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    revealTargets.forEach(el => revealObserver.observe(el));
+  } else {
+    // Fallback for very old browsers without IntersectionObserver support
+    revealTargets.forEach(el => el.classList.add('in-view'));
+  }
+
+  /* ------------------------------------------------------------
+     1c. SKILL BAR ANIMATION
+     Bars start at width:0 in CSS. Once the profile section scrolls
+     into view, read each bar's data-pct attribute and set its real
+     width — the CSS transition animates the fill.
+     ------------------------------------------------------------ */
+  const skillSection = document.getElementById('skillBars');
+  if (skillSection && 'IntersectionObserver' in window){
+    const barObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting){
+          entry.target.querySelectorAll('.bar-fill').forEach(bar => {
+            bar.style.width = bar.dataset.pct + '%';
+          });
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    barObserver.observe(skillSection);
+  }
+
+  /* ================================================================
+     2. SLOT MACHINE GAME LOGIC
+     This section mirrors the original Python script variable-for-
+     variable and function-for-function, just translated to JS:
+
+       Python                      -> JavaScript
+       symbol_count dict           -> SYMBOL_COUNT object
+       symbol_value dict           -> SYMBOL_VALUE object
+       get_slot_machine_spin()     -> spinColumns()
+       check_winnings()            -> checkWinnings()
+       print_slot_machine()        -> renderColumns() (draws to the DOM
+                                       instead of printing to a console)
+     ================================================================ */
+
+  // Same constants as MAX_LINES / MAX_BET / MIN_BET / ROWS / COLS in Python
+  const MAX_LINES = 3, MAX_BET = 100, MIN_BET = 1, ROWS = 3, COLS = 3;
+
+  // Same odds/payout tables as symbol_count / symbol_value in Python.
+  // Higher count = more common = lower payout (A is rare but pays best).
+  const SYMBOL_COUNT = { A: 2, B: 4, C: 6, D: 8 };
+  const SYMBOL_VALUE = { A: 5, B: 4, C: 3, D: 2 };
+
+  // Current game state (equivalent to the local variables main()/spin()
+  // pass around in the Python version).
+  let balance = 0;
+  let lines = 1;
+  let bet = MIN_BET;
+  let spinning = false; // true while a spin animation is in progress
+
+  // Grab every element we'll need to read from or write to.
+  const depositGate = document.getElementById('depositGate');
+  const depositInput = document.getElementById('depositInput');
+  const depositBtn = document.getElementById('depositBtn');
+  const gameArea = document.getElementById('gameArea');
+  const reelsEl = document.getElementById('reels');
+  const balanceVal = document.getElementById('balanceVal');
+  const lastVal = document.getElementById('lastVal');
+  const totalBetVal = document.getElementById('totalBetVal');
+  const linesVal = document.getElementById('linesVal');
+  const betVal = document.getElementById('betVal');
+  const spinBtn = document.getElementById('spinBtn');
+  const resultLine = document.getElementById('resultLine');
+
+  // Build the empty 3x3 grid of reel cells once, and keep references
+  // to each cell in cellRefs[column][row] so we can update them fast
+  // on every spin without re-creating DOM elements each time.
+  const cellRefs = [];
+  for (let c = 0; c < COLS; c++){
+    const colDiv = document.createElement('div');
+    colDiv.className = 'reel-col';
+    const col = [];
+    for (let r = 0; r < ROWS; r++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = '?';
+      colDiv.appendChild(cell);
+      col.push(cell);
+    }
+    reelsEl.appendChild(colDiv);
+    cellRefs.push(col);
+  }
+
+  // Refreshes the balance/total-bet numbers shown on screen.
+  function updateStats(){
+    balanceVal.textContent = '$' + balance;
+    totalBetVal.textContent = '$' + (bet * lines);
+  }
+  // Clamp lines to [1, MAX_LINES] — same bound as get_number_of_lines() in Python.
+  function setLines(n){ lines = Math.max(1, Math.min(MAX_LINES, n)); linesVal.textContent = lines; updateStats(); }
+  // Clamp bet to [MIN_BET, MAX_BET] — same bound as get_bet() in Python.
+  function setBet(n){ bet = Math.max(MIN_BET, Math.min(MAX_BET, n)); betVal.textContent = bet; updateStats(); }
+
+  // Wire up the +/- stepper buttons for lines and bet.
+  document.getElementById('linesUp').addEventListener('click', () => setLines(lines + 1));
+  document.getElementById('linesDown').addEventListener('click', () => setLines(lines - 1));
+  document.getElementById('betUp').addEventListener('click', () => setBet(bet + 1));
+  document.getElementById('betDown').addEventListener('click', () => setBet(bet - 1));
+
+  // Equivalent of Python's deposit(): validate the typed amount, then
+  // reveal the game and hide the deposit form.
+  depositBtn.addEventListener('click', () => {
+    const amount = parseInt(depositInput.value, 10);
+    if (!Number.isInteger(amount) || amount <= 0){
+      depositInput.style.borderColor = 'var(--chip-coral)';
+      depositInput.placeholder = 'Enter a number > 0';
+      return;
+    }
+    balance = amount;
+    depositGate.style.display = 'none';
+    gameArea.style.display = 'block';
+    setLines(1); setBet(MIN_BET); updateStats();
+  });
+  // Let Enter submit the deposit instead of requiring a mouse click.
+  depositInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') depositBtn.click(); });
+
+  // Equivalent of building `all_symbols` inside get_slot_machine_spin():
+  // returns one big array containing each symbol repeated by its weight,
+  // e.g. ["A","A","B","B","B","B","C",...]. Symbols with a higher count
+  // appear more often in this bag, so they're more likely to be drawn.
+  function buildBag(){
+    const bag = [];
+    for (const sym in SYMBOL_COUNT) for (let i = 0; i < SYMBOL_COUNT[sym]; i++) bag.push(sym);
+    return bag;
+  }
+
+  // Equivalent of get_slot_machine_spin(): for each of the 3 columns,
+  // draw 3 symbols at random WITHOUT replacement from a fresh copy of
+  // the weighted bag (each column gets its own independent bag, exactly
+  // like `current_symbols = all_symbols[:]` per column in the Python).
+  function spinColumns(){
+    const columns = [];
+    for (let c = 0; c < COLS; c++){
+      const pool = buildBag();
+      const column = [];
+      for (let r = 0; r < ROWS; r++){
+        const idx = Math.floor(Math.random() * pool.length); // random.choice()
+        column.push(pool[idx]);
+        pool.splice(idx, 1); // .remove(value) — no replacement
+      }
+      columns.push(column);
+    }
+    return columns;
+  }
+
+  // Equivalent of check_winnings(): a "line" is a row index (0 = top,
+  // 1 = middle, 2 = bottom). A line wins if every column has the same
+  // symbol at that row. Winnings = symbol's payout value * bet, summed
+  // across every winning line the player bet on.
+  function checkWinnings(columns, numLines, betAmount){
+    let winnings = 0;
+    const winningLines = [];
+    for (let line = 0; line < numLines; line++){
+      const symbol = columns[0][line];
+      let allMatch = true;
+      for (let c = 0; c < COLS; c++){
+        if (columns[c][line] !== symbol){ allMatch = false; break; }
+      }
+      if (allMatch){
+        winnings += SYMBOL_VALUE[symbol] * betAmount;
+        winningLines.push(line + 1); // display as 1-indexed, like the Python version
+      }
+    }
+    return { winnings, winningLines };
+  }
+
+  // Equivalent of print_slot_machine(): writes the drawn symbols into
+  // the on-screen grid, and highlights any cell that's part of a
+  // winning line.
+  function renderColumns(columns, winningLines){
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++){
+      const cell = cellRefs[c][r];
+      const sym = columns[c][r];
+      cell.textContent = sym;
+      cell.dataset.sym = sym; // used by CSS to color each symbol differently
+      cell.classList.toggle('win-cell', winningLines.includes(r + 1));
+    }
+  }
+
+  // Toggles the CSS "spinning" jitter animation on every cell, and
+  // clears any leftover win highlight from the previous spin.
+  function setSpinningVisual(on){
+    for (let c = 0; c < COLS; c++) for (let r = 0; r < ROWS; r++){
+      cellRefs[c][r].classList.toggle('spinning', on);
+      cellRefs[c][r].classList.remove('win-cell');
+    }
+  }
+
+  /* ================================================================
+     3. SPIN BUTTON — ties everything above together, equivalent to
+     the spin() function in the Python script.
+     ================================================================ */
+  spinBtn.addEventListener('click', () => {
+    if (spinning) return; // ignore clicks while a spin is already running
+
+    const totalBet = bet * lines;
+    if (totalBet > balance){
+      // Same guard as `if total_bet > balance` in Python's spin()
+      resultLine.className = 'result-line mono loss';
+      resultLine.textContent = `Not enough balance. Current: $${balance}.`;
+      return;
+    }
+
+    spinning = true;
+    spinBtn.disabled = true;
+    resultLine.className = 'result-line mono';
+    resultLine.textContent = 'Spinning...';
+    setSpinningVisual(true);
+
+    // Small delay purely for visual effect (a real spin animation),
+    // then compute and reveal the result — same math as the Python
+    // version's `return winnings - total_bet` line.
+    setTimeout(() => {
+      const columns = spinColumns();
+      const { winnings, winningLines } = checkWinnings(columns, lines, bet);
+      setSpinningVisual(false);
+      renderColumns(columns, winningLines);
+
+      balance = balance - totalBet + winnings;
+      const net = winnings - totalBet;
+      updateStats();
+
+      lastVal.textContent = (net >= 0 ? '+' : '') + '$' + net;
+      lastVal.classList.toggle('win', net > 0);
+      lastVal.classList.toggle('loss', net < 0);
+
+      if (winnings > 0){
+        resultLine.className = 'result-line mono win';
+        resultLine.textContent = `Won $${winnings} on line${winningLines.length > 1 ? 's' : ''} ${winningLines.join(', ')}.`;
+      } else {
+        resultLine.className = 'result-line mono loss';
+        resultLine.textContent = 'No winning lines.';
+      }
+
+      if (balance <= 0){
+        resultLine.textContent += ' Out of balance — deposit again.';
+        spinBtn.disabled = true; // stop play until they top up
+      } else {
+        spinBtn.disabled = false;
+      }
+      spinning = false;
+    }, 550);
+  });
+
+})();
+</script>
+
+</body>
+</html>
